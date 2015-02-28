@@ -27,6 +27,9 @@ func (l *users) Receive(m events.Message) {
 	}
 }
 
+func (l *users) Terminate() {
+}
+
 func (l *users) registerUser(r RegistrationRequest) Registration {
 	return Registration{id: "1", email: r.email, password: r.password}
 }

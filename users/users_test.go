@@ -11,7 +11,14 @@ func TestReceivesRegistration(t *testing.T) {
 
 	e.Send(m)
 
-	envelope := r.messages.Back().Value.(events.Message)
+	e.Terminate()
+
+	envelope := findRegistration(m.Id(), r.messages)
+
+	if envelope == nil {
+		t.Error("Should have received registration with same id")
+	}
+
 	result := envelope.Content.(Registration)
 
 	if result.email != "email@example.com" {
@@ -21,14 +28,22 @@ func TestReceivesRegistration(t *testing.T) {
 	if result.password != "password" {
 		t.Errorf("Password should be password but was %s", result.password)
 	}
+}
 
-	if m.Id() != envelope.Id() {
-		t.Error("Should inherit request id")
+func findRegistration(id int64, messages *list.List) *events.Message {
+	for it := messages.Front(); it.Value != nil; it = it.Next() {
+		m := it.Value.(events.Message)
+		if m.Id() == id {
+			if _, ok := m.Content.(Registration); ok {
+				return &m
+			}
+		}
 	}
+	return nil
 }
 
 func setup() (events.Stream, recorder) {
-	e := events.NewStream()
+	e := events.SyncStream()
 
 	Initialise(e)
 
@@ -44,4 +59,7 @@ type recorder struct {
 
 func (e recorder) Receive(m events.Message) {
 	e.messages.PushFront(m)
+}
+
+func (e recorder) Terminate() {
 }
