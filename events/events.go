@@ -20,52 +20,26 @@ type Stream interface {
 	Terminate()
 }
 
-type inprocSync struct {
-	receivers []Receiver
+func DefaultAsyncStream() Stream {
+	return AsyncStream(4)
 }
 
-func (b *inprocSync) Register(a Receiver) {
-	b.receivers = append(b.receivers, a)
-}
+func AsyncStream(workers int) Stream {
+	stream := &async{stream: stream(), input: make(chan Message, 100)}
 
-func (b *inprocSync) Send(message Message) {
-	for _, a := range b.receivers {
-		a.Receive(message)
+	for i := 0; i < workers; i++ {
+		go stream.Work()
 	}
-}
 
-func (b *inprocSync) Terminate() {
-	for _, a := range b.receivers {
-		a.Terminate()
-	}
-}
-
-type inproc struct {
-	receivers []chan Message
-}
-
-func (b *inproc) Register(a Receiver) {
-	ch := make(chan Message, 100)
-	b.receivers = append(b.receivers, ch)
-	go actor(ch, a)
-}
-
-func (b *inproc) Send(message Message) {
-	for _, a := range b.receivers {
-		a <- message
-	}
-}
-
-func (b *inproc) Terminate() {
-	b.Send(Message{id: terminate, Content: 0})
-}
-
-func AsyncStream() Stream {
-	return &inproc{receivers: make([]chan Message, 0, 100)}
+	return stream
 }
 
 func SyncStream() Stream {
-	return &inprocSync{receivers: make([]Receiver, 0, 100)}
+	return stream()
+}
+
+func stream() *subscribers {
+	return &subscribers{receivers: make([]Receiver, 0, 100)}
 }
 
 func NewMessage(c interface{}) Message {
@@ -80,14 +54,45 @@ func (m Message) Id() int64 {
 	return m.id
 }
 
-func actor(ch chan Message, r Receiver) {
-	for {
-		m := <-ch
-		if m.id == terminate {
-			r.Terminate()
-			return
-		} else {
-			r.Receive(m)
-		}
+type subscribers struct {
+	receivers []Receiver
+}
+
+func (b *subscribers) Register(a Receiver) {
+	b.receivers = append(b.receivers, a)
+}
+
+func (b *subscribers) Send(message Message) {
+	for _, a := range b.receivers {
+		a.Receive(message)
+	}
+}
+
+func (b *subscribers) Terminate() {
+	for _, a := range b.receivers {
+		a.Terminate()
+	}
+}
+
+type async struct {
+	stream Stream
+	input  chan Message
+}
+
+func (b *async) Register(a Receiver) {
+	b.stream.Register(a)
+}
+
+func (b *async) Send(message Message) {
+	b.input <- message
+}
+
+func (b *async) Terminate() {
+	b.input <- Message{id: terminate, Content: 0}
+}
+
+func (b *async) Work() {
+	for a := range b.input {
+		b.stream.Send(a)
 	}
 }

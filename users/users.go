@@ -3,26 +3,30 @@ package users
 import "github.com/devmop/event-stream/events"
 
 func Initialise(stream events.Stream) {
-	stream.Register(&users{stream: stream})
+	stream.Register(&users{stream: stream, registered: make(map[string]*Registration)})
 }
 
 type users struct {
-	stream events.Stream
+	stream     events.Stream
+	registered map[string]*Registration
 }
 
 type RegistrationRequest struct {
-	email, password string
+	Email, Password string
 }
 
 type Registration struct {
-	id, email, password string
+	Id, Email, Password string
+}
+
+type AlreadyRegistered struct {
+	Email string
 }
 
 func (l *users) Receive(m events.Message) {
 	switch m.Content.(type) {
-	case RegistrationRequest:
-		r := l.registerUser(m.Content.(RegistrationRequest))
-		l.stream.Send(m.ChildMessage(r))
+	case *RegistrationRequest:
+		l.registerUser(m.Content.(*RegistrationRequest), m)
 	default:
 	}
 }
@@ -30,6 +34,13 @@ func (l *users) Receive(m events.Message) {
 func (l *users) Terminate() {
 }
 
-func (l *users) registerUser(r RegistrationRequest) Registration {
-	return Registration{id: "1", email: r.email, password: r.password}
+func (l *users) registerUser(r *RegistrationRequest, m events.Message) {
+	_, exists := l.registered[r.Email]
+	if exists {
+		l.stream.Send(m.ChildMessage(&AlreadyRegistered{Email: r.Email}))
+	} else {
+		reg := &Registration{Id: "1", Email: r.Email, Password: r.Password}
+		l.registered[reg.Email] = reg
+		l.stream.Send(m.ChildMessage(reg))
+	}
 }
