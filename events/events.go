@@ -96,3 +96,18 @@ func (b *async) Work() {
 		b.stream.Send(a)
 	}
 }
+
+type lambda struct {
+	l func(m Message)
+}
+
+func (f *lambda) Receive(m Message) {
+	f.l(m)
+}
+
+func (f *lambda) Terminate() {
+}
+
+func Lambda(s Stream, l func(m Message)) {
+	s.Register(&lambda{l: l})
+}

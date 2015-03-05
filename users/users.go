@@ -16,7 +16,8 @@ type RegistrationRequest struct {
 }
 
 type Registration struct {
-	Id, Email, Password string
+	Id    string `json:"id"`
+	Email string `json:"email"`
 }
 
 type AlreadyRegistered struct {
@@ -39,7 +40,7 @@ func (l *users) registerUser(r *RegistrationRequest, m events.Message) {
 	if exists {
 		l.stream.Send(m.ChildMessage(&AlreadyRegistered{Email: r.Email}))
 	} else {
-		reg := &Registration{Id: "1", Email: r.Email, Password: r.Password}
+		reg := &Registration{Id: "1", Email: r.Email}
 		l.registered[reg.Email] = reg
 		l.stream.Send(m.ChildMessage(reg))
 	}
