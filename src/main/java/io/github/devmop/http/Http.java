@@ -1,19 +1,18 @@
 package io.github.devmop.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.eventbus.*;
+import com.sun.net.httpserver.*;
+import io.github.devmop.actors.*;
+import io.github.devmop.application.*;
+import io.github.devmop.users.RegistrationRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.net.httpserver.*;
-import io.github.devmop.actors.*;
-import io.github.devmop.application.*;
-import io.github.devmop.events.*;
-import io.github.devmop.users.RegistrationRequest;
 
-
-public class Http implements Listener, HttpHandler {
+public class Http implements HttpHandler {
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private final HttpServer server = initialise();
@@ -22,6 +21,7 @@ public class Http implements Listener, HttpHandler {
   public Http(EventBus bus) {
     server.createContext("/users", this);
     this.bus = bus;
+    bus.register(this);
   }
 
   private HttpServer initialise() {
@@ -46,8 +46,8 @@ public class Http implements Listener, HttpHandler {
   private void sendRegistration(final HttpExchange httpExchange) {
     try {
       Map<String, String> json = mapper.readValue(httpExchange.getRequestBody(), Map.class);
-      bus.send(Message.create(new RegistrationRequest(json.get("email"), json.get("password"),
-          new JsonResponse<>(new HttpResponse(httpExchange)))));
+      bus.post(new RegistrationRequest(json.get("email"), json.get("password"),
+          new JsonResponse<>(new HttpResponse(httpExchange))));
     }
     catch (IOException e) {
       httpExchange.close();
@@ -55,14 +55,14 @@ public class Http implements Listener, HttpHandler {
     }
   }
 
-  @Override
-  public void receive(final Message message) {
-    if (message.content instanceof Start) {
-      server.start();
-    }
-    if (message.content instanceof Terminate) {
-      server.stop(1);
-    }
+  @Subscribe
+  public void start(Start start) {
+    server.start();
+  }
+
+  @Subscribe
+  public void stop(Terminate terminate) {
+    server.stop(1);
   }
 
   private void send404(final HttpExchange httpExchange) {

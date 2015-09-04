@@ -1,14 +1,14 @@
 package io.github.devmop.http;
-import java.util.*;
 
-import static io.github.devmop.application.Subsystem.*;
-import static io.github.devmop.application.System.*;
-import io.github.devmop.events.EventBus;
+import com.google.common.eventbus.EventBus;
 import io.github.devmop.users.Registration;
+import java.util.*;
 import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.*;
 import org.junit.*;
+import static io.github.devmop.application.Subsystem.*;
+import static io.github.devmop.application.System.*;
 
 public class HttpTest {
 

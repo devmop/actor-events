@@ -1,7 +1,6 @@
 package io.github.devmop.application;
 
-import io.github.devmop.events.*;
-
+import com.google.common.eventbus.EventBus;
 
 public interface System {
 
@@ -11,11 +10,11 @@ public interface System {
       subsystem.initialise(bus);
     }
 
-    bus.send(Message.create(new Start()));
+    bus.post(new Start());
     return bus;
   }
 
   public static void shutdown(EventBus bus) {
-    bus.send(Message.create(new Terminate()));
+    bus.post(new Terminate());
   }
 }

@@ -1,6 +1,6 @@
 package io.github.devmop.application;
 
-import io.github.devmop.events.*;
+import com.google.common.eventbus.EventBus;
 import io.github.devmop.http.Http;
 import io.github.devmop.users.Users;
 
@@ -9,16 +9,14 @@ public enum Subsystem {
 
     @Override
     void initialise(final EventBus bus) {
-      Listener users = new Users(bus);
-      bus.register(users);
+      new Users(bus);
     }
   },
   HTTP {
 
     @Override
     void initialise(final EventBus bus) {
-      Listener http = new Http(bus);
-      bus.register(http);
+      new Http(bus);
     }
   };
 

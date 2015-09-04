@@ -1,19 +1,15 @@
 package io.github.devmop.users;
 
-import java.util.*;
-
-import io.github.devmop.actors.*;
+import com.google.common.eventbus.*;
+import io.github.devmop.actors.IdResponse;
 import io.github.devmop.application.System;
-import io.github.devmop.events.EventBus;
-import io.github.devmop.events.Listener;
-import io.github.devmop.events.Message;
+import java.util.*;
 import org.junit.Test;
-
 import static io.github.devmop.application.Subsystem.AUTHENTICATION;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-public class UsersTest implements Listener {
+public class UsersTest {
 
   private EventBus bus = System.initialise(AUTHENTICATION);
   private List<Registration> events = new LinkedList<>();
@@ -22,7 +18,7 @@ public class UsersTest implements Listener {
   public void acceptedRegistrationsGenerateResponse() throws Exception {
     IdResponse<Registration> response = new IdResponse<>();
 
-    bus.send(Message.create(new RegistrationRequest("email@example.com", "password", response)));
+    bus.post(new RegistrationRequest("email@example.com", "password", response));
 
     assertThat(response.response.id, notNullValue());
     assertThat(response.response.email, equalTo("email@example.com"));
@@ -32,7 +28,7 @@ public class UsersTest implements Listener {
   public void acceptedRegistrationsBroadcastEvent() throws Exception {
     bus.register(this);
 
-    bus.send(Message.create(new RegistrationRequest("email@example.com", "password", new IdResponse<Registration>())));
+    bus.post(new RegistrationRequest("email@example.com", "password", new IdResponse<>()));
 
     assertThat(events, not(empty()));
 
@@ -40,10 +36,8 @@ public class UsersTest implements Listener {
     assertThat(events.get(0).email, equalTo("email@example.com"));
   }
 
-  @Override
-  public void receive(final Message message) {
-    if (message.content instanceof Registration) {
-      events.add((Registration) message.content);
-    }
+  @Subscribe
+  public void receiveRegistrationNotification(final Registration registration) {
+      events.add(registration);
   }
 }

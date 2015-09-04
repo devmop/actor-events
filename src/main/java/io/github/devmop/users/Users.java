@@ -1,33 +1,25 @@
 package io.github.devmop.users;
 
+import com.google.common.eventbus.*;
 import java.util.*;
 
-import io.github.devmop.events.EventBus;
-import io.github.devmop.events.Listener;
-import io.github.devmop.events.Message;
-
-public class Users implements Listener {
+public class Users {
 
   private Map<String, Registration> users = new TreeMap<>();
   private long id = 1L;
   private final EventBus bus;
 
   public Users(EventBus bus) {
+    bus.register(this);
     this.bus = bus;
   }
 
-  @Override
-  public void receive(final Message message) {
-    if (message.content instanceof RegistrationRequest) {
-      acceptRegistration(message, (RegistrationRequest) message.content);
-    }
-  }
-
-  private void acceptRegistration(final Message message, final RegistrationRequest registrationRequest) {
+  @Subscribe
+  public void register(final RegistrationRequest registrationRequest) {
     Registration registration = new Registration(Long.toString(id++), registrationRequest.email);
     users.put(registration.email, registration);
     registrationRequest.reply(registration);
 
-    bus.send(message.child(registration));
+    bus.post(registration);
   }
 }
